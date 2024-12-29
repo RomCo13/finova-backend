@@ -1,0 +1,5 @@
+real time:
+https://finnhub.io/api/v1/quote?symbol=AAPL&token=cpna92pr01qtggbavitgcpna92pr01qtggbaviu0
+
+history
+https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=AAPL&apikey=9BVIQ3O8J627J1RT&outputsize=compact&datatype=json
