@@ -15,7 +15,6 @@ export class StocksService {
   async getStockProfile(symbol: string): Promise<any> {
     const apiKey = this.configService.get<string>('FINNHUB_API_KEY');
     const url = `${this.finnhubBaseUrl}/stock/profile2?symbol=${symbol}&token=${apiKey}`;
-    console.log(url);
     const response = await this.httpService.axiosRef.get(url);
     return response.data;
   }
