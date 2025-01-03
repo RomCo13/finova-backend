@@ -6,8 +6,8 @@ import { ConfigService } from '@nestjs/config';
 export class StocksService {
   private readonly liveStocksBaseUrl: string;
   private readonly liveStockApiKey: string;
-  private readonly historeyStocksBaseUrl: string;
-  private readonly historeyStocksAPIKey: string;
+  private readonly historyStocksBaseUrl: string;
+  private readonly historyStocksAPIKey: string;
 
   constructor(
     private readonly httpService: HttpService,
@@ -15,8 +15,8 @@ export class StocksService {
   ) {
     this.liveStocksBaseUrl = this.configService.get<string>('LIVE_STOCKS_BASE_URL');
     this.liveStockApiKey = this.configService.get<string>('LIVE_STOCKS_API_KEY');
-    this.historeyStocksBaseUrl = this.configService.get<string>('HISTORY_STOCKS_BASE_URL');
-    this.historeyStocksAPIKey = this.configService.get<string>('HISTORY_STOCKS_API_KEY');
+    this.historyStocksBaseUrl = this.configService.get<string>('HISTORY_STOCKS_BASE_URL');
+    this.historyStocksAPIKey = this.configService.get<string>('HISTORY_STOCKS_API_KEY');
   }
 
   async getStockProfile(symbol: string): Promise<any> {
@@ -32,7 +32,7 @@ export class StocksService {
   }
 
   async getAlphaVantageData(symbol: string): Promise<any> {
-    const url = `${this.historeyStocksBaseUrl}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${this.historeyStocksAPIKey}&outputsize=compact`;
+    const url = `${this.historyStocksBaseUrl}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${this.historyStocksAPIKey}&outputsize=compact`;
     const response = await this.httpService.axiosRef.get(url);
     return response.data;
   }
