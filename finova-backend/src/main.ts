@@ -11,7 +11,7 @@ async function bootstrap() {
     .setDescription('API for retrieving and managing stock data')
     .setVersion('1.0')
     .addBearerAuth() // Add authorization if required
-    .build();
+    .build(); //
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document); // Swagger UI available at /api-docs
