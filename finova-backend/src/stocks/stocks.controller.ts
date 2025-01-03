@@ -8,13 +8,20 @@ export class StocksController {
   constructor(private readonly stocksService: StocksService) {}
 
   @Get('profile')
-  @ApiOperation({ summary: 'Get stock profile from Finnhub' })
+  @ApiOperation({ summary: 'Get stock profile' })
   @ApiQuery({ name: 'symbol', description: 'Stock symbol', required: true })
   async getStockProfile(@Query('symbol') symbol: string) {
     return this.stocksService.getStockProfile(symbol);
   }
 
-  @Get('alpha-vantage')
+  @Get('live')
+  @ApiOperation({ summary: 'Get stock live data' })
+  @ApiQuery({ name: 'symbol', description: 'Stock symbol', required: true })
+  async getStockLiveData(@Query('symbol') symbol: string) {
+    return this.stocksService.getStockLiveData(symbol);
+  }
+
+  @Get('history')
   @ApiOperation({ summary: 'Get stock data from Alpha Vantage' })
   @ApiQuery({ name: 'symbol', description: 'Stock symbol', required: true })
   async getAlphaVantageData(@Query('symbol') symbol: string) {
