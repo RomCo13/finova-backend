@@ -6,7 +6,6 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
@@ -14,6 +13,7 @@ async function bootstrap() {
     disableErrorMessages: false, 
   }));
 
+  app.enableCors();
   const config = new DocumentBuilder()
     .setTitle('Stock API')
     .setDescription('API for retrieving and managing stock data')
