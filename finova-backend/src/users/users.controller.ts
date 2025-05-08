@@ -1,9 +1,19 @@
-import { Controller, Post, Body, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Req,
+  UseGuards,
+  Param,
+  Put,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { SignUpUserDto } from './dto/sign-up-user.dto';
 import { SignInUserDto } from './dto/sign-in-user.dto';
 import { AuthGuard } from '@nestjs/passport';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -22,11 +32,24 @@ export class UsersController {
     try {
       return await this.usersService.signIn(signinUserRequest);
     } catch (error) {
-      console.log(error)
+      console.log(error);
       throw error;
     }
   }
 
+  @Put('UpdateUserByEmail/:email')
+  @ApiOperation({ summary: 'Update an existing user by email' })
+  async updateUserByEmail(
+    @Param('email') email: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    try {
+      return await this.usersService.updateUserByEmail(email, updateUserDto);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
   @UseGuards(AuthGuard('jwt')) // Use the JWT Auth Guard
   @ApiBearerAuth() // Show Bearer token field in Swagger UI
   @Get('me')

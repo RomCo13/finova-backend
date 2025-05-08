@@ -6,6 +6,7 @@ import { SignUpUserDto } from './dto/sign-up-user.dto';
 import { SignInUserDto } from './dto/sign-in-user.dto';
 import { User } from './schemas/user.schema';
 import * as bcrypt from 'bcryptjs';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -35,5 +36,19 @@ export class UsersService {
 
     const token = this.jwtService.sign({ sub: existingUser._id }); 
     return { token, user: existingUser };
+  }
+  
+  async updateUserByEmail(email: string, updateUserDto: UpdateUserDto): Promise<User> {
+    const user = await this.userModel.findOneAndUpdate(
+      { email },
+      updateUserDto,
+      { new: true }
+    );
+  
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found`);
+    }
+  
+    return user;
   }
 }
