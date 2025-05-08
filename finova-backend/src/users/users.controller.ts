@@ -55,6 +55,11 @@ export class UsersController {
   @Get('me')
   @ApiOperation({ summary: 'Get current logged-in user' })
   async getProfile(@Req() req: any) {
-    return req.user;
+    try {
+      return await this.usersService.reAuthByToken(req.user.userId);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   }
 }

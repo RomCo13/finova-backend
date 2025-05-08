@@ -51,4 +51,9 @@ export class UsersService {
   
     return user;
   }
+
+  async reAuthByToken (id: string) {
+    const user = await this.userModel.findById(id).select('-password'); // exclude password
+    return user;
+  }
 }
