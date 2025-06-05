@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
+  console.log(process.env.MONGODB_URI);
   const app = await NestFactory.create(AppModule);
 
   app.useGlobalPipes(new ValidationPipe({
