@@ -6,6 +6,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
 import { ChartModule } from './charts/chart.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ChartModule } from './charts/chart.module';
     }),
     UsersModule,
     ChartModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
