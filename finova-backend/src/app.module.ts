@@ -5,6 +5,7 @@ import { StocksModule } from './stocks/stocks.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersModule } from './users/users.module';
+import { ChartModule } from './charts/chart.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { UsersModule } from './users/users.module';
       }),
       inject: [ConfigService],
     }),
-    UsersModule
+    UsersModule,
+    ChartModule,
   ],
   controllers: [AppController],
   providers: [AppService],
