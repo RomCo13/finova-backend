@@ -4,6 +4,17 @@ import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export enum ChartDateRange {
+  ONE_DAY = '1D',
+  FIVE_DAYS = '5D',
+  TEN_DAYS = '10D',
+  ONE_MONTH = '1M',
+  SIX_MONTHS = '6M',
+  ONE_YEAR = '1Y',
+  FIVE_YEARS = '5Y',
+  ALL_TIME = 'ALL',
+}
+
 interface TechnicalAnalysis {
   summary: {
     currentStatus: string;
@@ -24,9 +35,22 @@ interface TechnicalAnalysis {
     patterns: string;
     riskAssessment: string;
     currentTechnicalPosition: string;
+    gapAnalysis: {
+      hasGaps: boolean;
+      gaps: Array<{
+        type: 'UP' | 'DOWN';
+        startPrice: number;
+        endPrice: number;
+        size: number;
+        date?: string;
+        isFilled: boolean;
+      }>;
+      analysis: string;
+    };
   };
   timestamp: string;
   model: string;
+  dateRange: ChartDateRange;
 }
 
 @Injectable()
@@ -85,7 +109,10 @@ export class AiService {
     return response.data.candidates[0].content.parts[0].text;
   }
 
-  async analyzeChartImage(imagePath: string): Promise<TechnicalAnalysis> {
+  async analyzeChartImage(
+    imagePath: string,
+    dateRange: ChartDateRange = ChartDateRange.ONE_MONTH,
+  ): Promise<TechnicalAnalysis> {
     try {
       const relativePath = imagePath.startsWith('/')
         ? imagePath.slice(1)
@@ -106,25 +133,69 @@ export class AiService {
 
       // First attempt with detailed prompt
       const detailedPrompt = `
-You are a professional stock analyst. Based strictly on the attached stock chart's candlestick patterns, trendlines, RSI, MACD, and Bollinger Bands, provide a precise technical analysis.
+You are a professional technical analyst. Your task is to analyze a stock chart based strictly on visible price action, candlestick patterns, RSI, MACD, Bollinger Bands, and trendlines.
 
-Think step-by-step, and validate each indicator against the chart. Do NOT invent data — use only what is visible. Use consistent logic. Then format your answer in the exact format below.
+📌 IMPORTANT:
+- DO NOT guess or hallucinate data.
+- Use only the visible data in the chart (or the provided data points).
+- Reason step-by-step before giving the final output.
+- All price targets must have EXACTLY 2 decimal places (e.g., 312.48, not 312 or 312.4).
+- Follow the exact format below. Your response will be parsed into a JSON object.
+- The chart shows data for the last ${this.getDateRangeDescription(dateRange)}.
 
-Current Status: [One-line status]
-Recommendation: [BUY/SELL/HOLD]
-Confidence: [0-100, whole number only]
-Short Explanation: [2-3 sentences]
-Support Price: [Exact number with 2 decimal places, e.g., 292.17]
-Resistance Price: [Exact number with 2 decimal places]
-Stop Loss Price: [Exact number with 2 decimal places]
-Take Profit Price: [Exact number with 2 decimal places]
+👇 Begin your reasoning and analysis below.
 
-Trend Analysis: [Describe short- and long-term trends based on chart]
-Support and Resistance: [Identify exact visible levels]
-Technical Indicators: [Analyze RSI, MACD crossover, Bollinger Band behavior]
-Patterns: [Mention any clear chart patterns: e.g., Double Bottom, Head & Shoulders]
-Risk Assessment: [Assess based on volatility, volume, and stop loss range]
-Current Technical Position: [Where is price relative to indicators and trend lines]
+1. **Indicator Review**:
+   - RSI: [Insert RSI reading and whether it's overbought/neutral/oversold]
+   - MACD: [State crossover status and histogram strength]
+   - Bollinger Bands: [Is price near upper, lower, or middle band? Any squeeze/breakout?]
+   - Trend: [Describe short-term and long-term trendlines]
+   - Patterns: [Mention any visible patterns such as Double Bottom, Cup and Handle, Triangle, etc.]
+
+2. **Support & Resistance Identification**:
+   - Key Support Levels: [List specific levels]
+   - Key Resistance Levels: [List specific levels]
+
+3. **Gap Analysis**:
+   - Identify any price gaps in the chart
+   - For each gap, note:
+     * Type (UP/DOWN)
+     * Start and end prices (with 2 decimal places)
+     * Gap size
+     * Whether the gap has been filled
+     * Approximate date if visible
+   - Analyze the significance of gaps in the current context
+
+4. **Recommendation Logic**:
+   - Based on indicators, patterns, and levels, state if the stock is in a BUY / SELL / HOLD zone.
+   - Consider risk-reward ratio.
+   - If indicators are aligned, confidence increases. If conflicting, lower the confidence score.
+
+5. **Confidence Scoring (0–100)**:
+   Use the following rubric:
+   - 90–100: All indicators aligned (very high confidence)
+   - 70–89: Most indicators aligned, trend supports idea
+   - 50–69: Mixed signals or medium conviction
+   - Below 50: Indicators conflict or weak trend
+
+📤 Final Output (fill this exactly):
+
+Current Status: [One-line summary of the stock's position, e.g., "Stock is in a bullish breakout phase"]
+Recommendation: [BUY / SELL / HOLD]
+Confidence: [0–100]
+Short Explanation: [2–3 sentences summarizing the logic]
+Support Price: [e.g., 289.41]
+Resistance Price: [e.g., 314.55]
+Stop Loss Price: [e.g., 282.00]
+Take Profit Price: [e.g., 331.75]
+
+Trend Analysis: [Explain short-term and long-term trends]
+Support and Resistance: [Explain how levels were determined]
+Technical Indicators: [Summarize the RSI, MACD, and BB status]
+Patterns: [Mention and describe any chart patterns]
+Risk Assessment: [Comment on volatility, potential losses vs. gains, risk-reward]
+Current Technical Position: [Describe the current position relative to major indicators/trendlines]
+Gap Analysis: [Describe any price gaps found, their significance, and whether they've been filled]
 
 Your response will be parsed into this JSON structure:
 {
@@ -146,17 +217,25 @@ Your response will be parsed into this JSON structure:
     "technicalIndicators": "string",
     "patterns": "string",
     "riskAssessment": "string",
-    "currentTechnicalPosition": "string"
+    "currentTechnicalPosition": "string",
+    "gapAnalysis": {
+      "hasGaps": "boolean",
+      "gaps": [
+        {
+          "type": "UP/DOWN",
+          "startPrice": "number with 2 decimal places",
+          "endPrice": "number with 2 decimal places",
+          "size": "number with 2 decimal places",
+          "date": "string (optional)",
+          "isFilled": "boolean"
+        }
+      ],
+      "analysis": "string"
+    }
   }
 }
 
-IMPORTANT:
-- Do NOT skip any fields.
-- Do NOT round prices. Use exactly 2 decimal places.
-- Follow the exact headers and format shown.
-- Use only chart-visible data.
-- Be consistent in logic across all sections.
-`;
+DO NOT DEVIATE from the format. Use logic and consistency across all values.`;
 
       let analysis = await this.makeGeminiRequest(detailedPrompt, base64Image);
       this.logger.debug('Raw AI Response:', analysis);
@@ -169,6 +248,9 @@ IMPORTANT:
         parsedAnalysis = this.parseTextAnalysis(analysis);
       }
 
+      // Add date range to the analysis
+      parsedAnalysis.dateRange = dateRange;
+
       // Validate and fill in missing fields
       let validatedAnalysis = this.validateAndFillAnalysis(parsedAnalysis);
 
@@ -179,7 +261,7 @@ IMPORTANT:
           `First attempt failed. Missing fields: ${missingFields.join(', ')}. Retrying with simpler prompt...`,
         );
 
-        const simplePrompt = `Analyze this stock chart and provide a technical analysis. Your response MUST follow this EXACT format:
+        const simplePrompt = `Analyze this stock chart and provide a technical analysis. The chart shows data for the last ${this.getDateRangeDescription(dateRange)}. Your response MUST follow this EXACT format:
 
 Current Status: [One line status]
 Recommendation: [BUY/SELL/HOLD]
@@ -234,6 +316,9 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
           parsedAnalysis = this.parseTextAnalysis(analysis);
         }
 
+        // Add date range to the analysis
+        parsedAnalysis.dateRange = dateRange;
+
         // Validate and fill in missing fields
         validatedAnalysis = this.validateAndFillAnalysis(parsedAnalysis);
       }
@@ -248,6 +333,29 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
         );
       }
       throw error;
+    }
+  }
+
+  private getDateRangeDescription(dateRange: ChartDateRange): string {
+    switch (dateRange) {
+      case ChartDateRange.ONE_DAY:
+        return '24 hours';
+      case ChartDateRange.FIVE_DAYS:
+        return '5 days';
+      case ChartDateRange.TEN_DAYS:
+        return '10 days';
+      case ChartDateRange.ONE_MONTH:
+        return '1 month';
+      case ChartDateRange.SIX_MONTHS:
+        return '6 months';
+      case ChartDateRange.ONE_YEAR:
+        return '1 year';
+      case ChartDateRange.FIVE_YEARS:
+        return '5 years';
+      case ChartDateRange.ALL_TIME:
+        return 'all available time';
+      default:
+        return '1 month';
     }
   }
 
@@ -297,9 +405,15 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
           riskAssessment: parsed.detailedAnalysis.riskAssessment || '',
           currentTechnicalPosition:
             parsed.detailedAnalysis.currentTechnicalPosition || '',
+          gapAnalysis: {
+            hasGaps: parsed.detailedAnalysis.gapAnalysis?.hasGaps || false,
+            gaps: parsed.detailedAnalysis.gapAnalysis?.gaps || [],
+            analysis: parsed.detailedAnalysis.gapAnalysis?.analysis || '',
+          },
         },
         timestamp: new Date().toISOString(),
         model: 'gemini-1.5-flash',
+        dateRange: parsed.dateRange || ChartDateRange.ONE_MONTH,
       };
     } catch (error) {
       this.logger.debug('Failed to parse JSON response:', error.message);
@@ -349,9 +463,15 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
         patterns: '',
         riskAssessment: '',
         currentTechnicalPosition: '',
+        gapAnalysis: {
+          hasGaps: false,
+          gaps: [],
+          analysis: '',
+        },
       },
       timestamp: new Date().toISOString(),
       model: 'gemini-1.5-flash',
+      dateRange: ChartDateRange.ONE_MONTH,
     };
 
     // Extract summary information
@@ -420,11 +540,12 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
         /Patterns: (.*?)(?:\n(?:Risk|Current)|$)/s,
       );
       const riskMatch = detailedSection.match(
-        /Risk Assessment: (.*?)(?:\n(?:Current|$)|$)/s,
+        /Risk Assessment: (.*?)(?:\n(?:Current|Gap)|$)/s,
       );
       const positionMatch = detailedSection.match(
-        /Current Technical Position: (.*?)(?:\n\n|$)/s,
+        /Current Technical Position: (.*?)(?:\n(?:Gap|$)|$)/s,
       );
+      const gapMatch = detailedSection.match(/Gap Analysis: (.*?)(?:\n\n|$)/s);
 
       if (trendMatch)
         parsedAnalysis.detailedAnalysis.trendAnalysis = trendMatch[1].trim();
@@ -441,9 +562,47 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
       if (positionMatch)
         parsedAnalysis.detailedAnalysis.currentTechnicalPosition =
           positionMatch[1].trim();
+      if (gapMatch) {
+        parsedAnalysis.detailedAnalysis.gapAnalysis.analysis =
+          gapMatch[1].trim();
+        // Try to extract gap information from the analysis
+        const gapInfo = this.extractGapInfo(gapMatch[1]);
+        parsedAnalysis.detailedAnalysis.gapAnalysis.hasGaps = gapInfo.hasGaps;
+        parsedAnalysis.detailedAnalysis.gapAnalysis.gaps = gapInfo.gaps;
+      }
     }
 
     return parsedAnalysis;
+  }
+
+  private extractGapInfo(gapAnalysis: string): {
+    hasGaps: boolean;
+    gaps: any[];
+  } {
+    const gaps: any[] = [];
+    const gapMatches = gapAnalysis.matchAll(
+      /(?:gap|break|jump)(?:\s+of\s+|\s+at\s+|\s+from\s+|\s+to\s+|\s+between\s+)([\d.]+)(?:\s+to\s+|\s+and\s+)([\d.]+)/gi,
+    );
+
+    for (const match of gapMatches) {
+      const startPrice = this.extractPrice(match[1]);
+      const endPrice = this.extractPrice(match[2]);
+
+      if (startPrice !== null && endPrice !== null) {
+        gaps.push({
+          type: endPrice > startPrice ? 'UP' : 'DOWN',
+          startPrice,
+          endPrice,
+          size: Math.abs(endPrice - startPrice),
+          isFilled: gapAnalysis.toLowerCase().includes('filled'),
+        });
+      }
+    }
+
+    return {
+      hasGaps: gaps.length > 0,
+      gaps,
+    };
   }
 
   private validateAndFillAnalysis(
@@ -484,9 +643,17 @@ IMPORTANT: Follow the exact format above. Each line must start with the exact he
         currentTechnicalPosition:
           analysis.detailedAnalysis.currentTechnicalPosition ||
           'Current technical position not available',
+        gapAnalysis: {
+          hasGaps: analysis.detailedAnalysis.gapAnalysis?.hasGaps || false,
+          gaps: analysis.detailedAnalysis.gapAnalysis?.gaps || [],
+          analysis:
+            analysis.detailedAnalysis.gapAnalysis?.analysis ||
+            'No gap analysis available',
+        },
       },
       timestamp: analysis.timestamp,
       model: analysis.model,
+      dateRange: analysis.dateRange || ChartDateRange.ONE_MONTH,
     };
   }
 

@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ChartDateRange } from '../../ai/ai.service';
 
 export class ChartAnalysisSummary {
   @ApiProperty({ description: 'Current status of the stock' })
@@ -17,6 +18,16 @@ export class ChartAnalysisSummary {
 
   @ApiProperty({ description: 'Short explanation of the recommendation' })
   shortExplanation: string;
+
+  @ApiProperty({
+    description: 'Price targets',
+  })
+  priceTargets: {
+    supportPrice: number | null;
+    resistancePrice: number | null;
+    stopLossPrice: number | null;
+    takeProfitPrice: number | null;
+  };
 }
 
 export class DetailedAnalysis {
@@ -36,6 +47,23 @@ export class DetailedAnalysis {
 
   @ApiProperty({ description: 'Risk assessment and potential price targets' })
   riskAssessment: string;
+
+  @ApiProperty({ description: 'Current technical position' })
+  currentTechnicalPosition: string;
+
+  @ApiProperty({ description: 'Gap analysis' })
+  gapAnalysis: {
+    hasGaps: boolean;
+    gaps: Array<{
+      type: 'UP' | 'DOWN';
+      startPrice: number;
+      endPrice: number;
+      size: number;
+      date?: string;
+      isFilled: boolean;
+    }>;
+    analysis: string;
+  };
 }
 
 export class ChartAnalysisResponse {
@@ -53,4 +81,7 @@ export class ChartAnalysisResponse {
 
   @ApiProperty({ description: 'AI model used for analysis' })
   model: string;
+
+  @ApiProperty({ description: 'Date range of the analysis' })
+  dateRange: ChartDateRange;
 }
