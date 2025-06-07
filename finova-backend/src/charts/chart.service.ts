@@ -6,6 +6,7 @@ import { AiService } from '../ai/ai.service';
 import {
   ChartAnalysisResponse,
   ChartAnalysisSummary,
+  DetailedAnalysis,
 } from './interfaces/chart-analysis.interface';
 
 @Injectable()
@@ -23,77 +24,17 @@ export class ChartService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private parseAnalysis(analysis: string): ChartAnalysisSummary {
-    const lines = analysis.split('\n');
-    const summary: ChartAnalysisSummary = {
-      trend: '',
-      supportResistance: {
-        support: [],
-        resistance: [],
-      },
-      indicators: {
-        rsi: '',
-        macd: '',
-        bollingerBands: '',
-      },
-      recommendations: [],
-    };
-
-    let currentSection = '';
-    for (const line of lines) {
-      if (line.includes('Overall Trend Analysis:')) {
-        currentSection = 'trend';
-        continue;
-      } else if (line.includes('Key Support and Resistance Levels:')) {
-        currentSection = 'supportResistance';
-        continue;
-      } else if (line.includes('Technical Indicators Interpretation:')) {
-        currentSection = 'indicators';
-        continue;
-      } else if (line.includes('Trading Recommendations:')) {
-        currentSection = 'recommendations';
-        continue;
+  private cleanupSnapshot(filepath: string): void {
+    try {
+      if (fs.existsSync(filepath)) {
+        fs.unlinkSync(filepath);
+        this.logger.debug(`Cleaned up snapshot: ${filepath}`);
       }
-
-      if (line.trim() && !line.startsWith('**')) {
-        switch (currentSection) {
-          case 'trend':
-            summary.trend += line.trim() + ' ';
-            break;
-          case 'supportResistance':
-            if (line.includes('Support:')) {
-              summary.supportResistance.support.push(
-                line.replace('* Support:', '').trim(),
-              );
-            } else if (line.includes('Resistance:')) {
-              summary.supportResistance.resistance.push(
-                line.replace('* Resistance:', '').trim(),
-              );
-            }
-            break;
-          case 'indicators':
-            if (line.includes('RSI')) {
-              summary.indicators.rsi = line.replace('* RSI:', '').trim();
-            } else if (line.includes('MACD')) {
-              summary.indicators.macd = line.replace('* MACD:', '').trim();
-            } else if (line.includes('Bollinger Bands')) {
-              summary.indicators.bollingerBands = line
-                .replace('* Bollinger Bands:', '')
-                .trim();
-            }
-            break;
-          case 'recommendations':
-            if (line.startsWith('*')) {
-              summary.recommendations.push(line.replace('*', '').trim());
-            }
-            break;
-        }
-      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to cleanup snapshot ${filepath}: ${error.message}`,
+      );
     }
-
-    // Clean up any extra whitespace
-    summary.trend = summary.trend.trim();
-    return summary;
   }
 
   async captureChart(symbol: string): Promise<ChartAnalysisResponse> {
@@ -108,6 +49,7 @@ export class ChartService {
       ],
     });
 
+    let filepath: string;
     try {
       const page = await browser.newPage();
       await page.setViewport({
@@ -183,7 +125,7 @@ export class ChartService {
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `${symbol}_${timestamp}.png`;
-      const filepath = path.join(this.snapshotsDir, filename);
+      filepath = path.join(this.snapshotsDir, filename);
 
       await page.screenshot({
         path: filepath as `${string}.png`,
@@ -197,16 +139,22 @@ export class ChartService {
       const url = `/snapshots/${filename}`;
 
       const analysis = await this.aiService.analyzeChartImage(url);
-      const summary = this.parseAnalysis(analysis.analysis);
+
+      // Clean up the snapshot after analysis is complete
+      this.cleanupSnapshot(filepath);
 
       return {
         url,
-        summary,
-        detailedAnalysis: analysis.analysis,
+        summary: analysis.summary,
+        detailedAnalysis: analysis.detailedAnalysis,
         timestamp: analysis.timestamp,
         model: analysis.model,
       };
     } catch (error) {
+      // Clean up the snapshot in case of error
+      if (filepath) {
+        this.cleanupSnapshot(filepath);
+      }
       this.logger.error(
         `Failed to capture chart for ${symbol}: ${error.message}`,
       );

@@ -1,24 +1,41 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class ChartAnalysisSummary {
-  @ApiProperty({ description: 'Overall trend analysis of the stock' })
-  trend: string;
+  @ApiProperty({ description: 'Current status of the stock' })
+  currentStatus: string;
 
-  @ApiProperty({ description: 'Key support and resistance levels' })
-  supportResistance: {
-    support: string[];
-    resistance: string[];
-  };
+  @ApiProperty({
+    description: 'Trading recommendation',
+    enum: ['BUY', 'SELL', 'HOLD'],
+  })
+  recommendation: 'BUY' | 'SELL' | 'HOLD';
 
-  @ApiProperty({ description: 'Technical indicators interpretation' })
-  indicators: {
-    rsi: string;
-    macd: string;
-    bollingerBands: string;
-  };
+  @ApiProperty({
+    description: 'Confidence level of the recommendation (0-100)',
+  })
+  confidence: number;
 
-  @ApiProperty({ description: 'Trading recommendations' })
-  recommendations: string[];
+  @ApiProperty({ description: 'Short explanation of the recommendation' })
+  shortExplanation: string;
+}
+
+export class DetailedAnalysis {
+  @ApiProperty({
+    description: 'Trend analysis including short-term and long-term trends',
+  })
+  trendAnalysis: string;
+
+  @ApiProperty({ description: 'Support and resistance levels analysis' })
+  supportResistance: string;
+
+  @ApiProperty({ description: 'Technical indicators analysis' })
+  technicalIndicators: string;
+
+  @ApiProperty({ description: 'Chart patterns identified' })
+  patterns: string;
+
+  @ApiProperty({ description: 'Risk assessment and potential price targets' })
+  riskAssessment: string;
 }
 
 export class ChartAnalysisResponse {
@@ -28,8 +45,8 @@ export class ChartAnalysisResponse {
   @ApiProperty({ description: 'Summary of the technical analysis' })
   summary: ChartAnalysisSummary;
 
-  @ApiProperty({ description: 'Detailed analysis text' })
-  detailedAnalysis: string;
+  @ApiProperty({ description: 'Detailed technical analysis' })
+  detailedAnalysis: DetailedAnalysis;
 
   @ApiProperty({ description: 'Timestamp of the analysis' })
   timestamp: string;
