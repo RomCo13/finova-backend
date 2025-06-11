@@ -21,8 +21,10 @@ async function bootstrap() {
   // Serve static files from public directory
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.enableCors();
-  const config = new DocumentBuilder()
+  app.enableCors({
+    origin: '*',
+  });
+    const config = new DocumentBuilder()
     .setTitle('Stock API')
     .setDescription('API for retrieving and managing stock data')
     .setVersion('1.0')
