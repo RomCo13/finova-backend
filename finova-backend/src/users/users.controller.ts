@@ -62,4 +62,17 @@ export class UsersController {
       throw error;
     }
   }
+
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @Get('stocks')
+  @ApiOperation({ summary: 'Get followed stocks for current user' })
+  async getFollowedStocks(@Req() req: any) {
+    try {
+      return await this.usersService.getFollowedStocks(req.user.userId);
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
+  }
 }

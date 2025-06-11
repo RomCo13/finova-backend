@@ -15,11 +15,14 @@ export class User extends Document {
 
   @Prop({ required: false, default: false })
   pro: boolean;
+
+  @Prop({ type: [String], default: [] })
+  followedStocks: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
   if (this.isModified('password') || this.isNew) {
     const salt = await bcrypt.genSalt();
     this.password = await bcrypt.hash(this.password, salt);
