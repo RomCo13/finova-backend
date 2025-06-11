@@ -9,6 +9,9 @@ async function bootstrap() {
   console.log(process.env.MONGODB_URI);
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.enableCors({
+    origin: '*',
+  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -21,9 +24,6 @@ async function bootstrap() {
   // Serve static files from public directory
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  app.enableCors({
-    origin: '*',
-  });
     const config = new DocumentBuilder()
     .setTitle('Stock API')
     .setDescription('API for retrieving and managing stock data')
